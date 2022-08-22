@@ -1,0 +1,127 @@
+---
+title: "20220816_Psychometrics"
+author: "Sidhant Chaudhary"
+date: Sys.Date()
+format: pdf
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup}
+#| include: false
+knitr::opts_chunk$set(message = F, warning = F,echo = TRUE)
+
+# load packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, tidytuesdayR, skimr, conflicted) 
+
+# conflicts: identical function names from different packages
+conflict_prefer("select", "dplyr")
+conflict_prefer("filter", "dplyr")
+
+update_geom_defaults("rect", list(fill = "midnightblue", alpha = 0.8))
+update_geom_defaults("line", list(color = "midnightblue", alpha = 0.8))
+theme_set(theme_bw())
+```
+
+# Reading the datasets
+
+```{r}
+# uncomment to download data
+tuesdata <- tidytuesdayR::tt_load('2022-08-16')
+characters <- tuesdata$characters %>% janitor::clean_names()
+myers_briggs <- tuesdata$myers_briggs %>% janitor::clean_names()
+psych_stats <- tuesdata$psych_stats %>% janitor::clean_names()
+```
+
+```{r}
+skim(characters)
+skim(myers_briggs)
+skim(psych_stats)
+```
+
+So, I will not be using the Myers Briggs data but only the characters data that is interesting to me.
+
+# Let's explore the data
+
+I think I will be filtering for the shows that I enjoyed in the past.
+
+```{r}
+
+characters %>%
+  mutate(uni_name = str_replace_all(uni_name, " ", "_")) %>%
+  #mutate(uni_name = str_to_lower(uni_name)) %>%
+  select(uni_name) %>%
+  unique() %>% print(n = Inf)
+
+int_shows <- c("Friends", 
+               "How_I_Met_Your_Mother", 
+               "Game_of_Thrones", 
+               "The_Office", 
+               "The_Big_Bang_Theory",
+               "Ozark",
+               "Marvel_Cinematic_Universe",
+               "Modern_Family",
+               "Sherlock",
+               "Brooklyn_Nine-Nine",
+               "Breaking_Bad",
+               "Dexter"
+               )
+
+# let combine and filter the datasets only for the interesting (to me) shows
+char_psych <-
+  characters %>%
+  left_join(psych_stats, by = c("uni_id", "uni_name", "id" = "char_id", "name" = "char_name")) %>%
+  mutate(uni_name = str_replace_all(uni_name, " ", "_")) %>% 
+  filter(uni_name %in% int_shows) %>%
+  mutate_if(is.character, factor) %>%
+  select(uni_name, uni_id, name, id, notability, question, personality, avg_rating, rank, rating_sd, number_ratings)
+```
+
+# Exploring the combined dataset
+
+```{r}
+char_psych %>%
+  group_by(personality) %>% count %>% view()
+
+# Notability
+char_psych %>%
+  select(name, notability, uni_name) %>%
+  distinct(name, notability, .keep_all = T ) %>%
+  ggplot(aes(notability, fct_reorder(name, notability))) +
+  geom_col() +
+  scale_x_continuous(limits = c(0,100), expand = c(0,0), 
+                     labels = scales::percent_format(scale = 1)) + 
+  facet_wrap(~uni_name, scales = "free_y") + 
+  labs(title = "Notability of various characters per show",
+       x = "Notability", y = "Name of the character") 
+
+# 
+char_psych %>%
+  filter(uni_name == "Breaking_Bad") %>%
+  group_by(personality) %>% count()
+```
+
+-   **Notability trait** tells us how known a character is to general public and it follows the expectation per show.
+-   
+
+# Looking at the anti-hero characters across universes
+
+Specifically, I am interested in exploring how similar the personality traits of below-mentioned characters are:
+
+1.  Walter White
+2.  Mike Ehrmantraut
+3.  Gus Fring
+4.  Saul Goodman
+5.  Dexter Morgan
+6.  Tyrion Lannister
+7.  Jamie Lannister
+8.  Marty Byrde
+9.  Wendy Byrde
+10. Ruth Langmore
+11. Darlene Snell
+
+```{r}
+
+```
